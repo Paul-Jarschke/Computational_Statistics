@@ -7,13 +7,14 @@
 # Load dependencies ----
 library(pracma)
 
-# Problem 1.1 Conjugate Gradient Algorithm ----
+# Problem 1.2 Preconditioned Conjugate Gradient Algorithm ----
 
-CG <-
-  function(A, b, x) {
-    r <- b - A %*% x  # Initialize residual vector
-    p <- r
-    j <- 0
+PCG <-
+  function(A, b, x, M, tol = 1e-14) {
+    r <- b - A %*% x
+    z <- solve(M, r)
+    p <- z
+    j <- 1
     
     conv <- Norm(r)
     
@@ -21,14 +22,16 @@ CG <-
       error <- Norm(r, Inf)
     }
     
-    cat("Starting Conguate Gradient algorithm...\n")
-    while (((Norm(r) / Norm(b)) > 1e-14) && j < 500) {
-      alpha <- crossprod(r) / (t(p) %*% A %*% p)
+    cat("Starting Preconditioned Conguate Gradient algorithm...\n")
+    while (((Norm(r) / Norm(b)) > tol) && j < 500) {
+      alpha <- crossprod(z, r) / (t(p) %*% A %*% p)
       x <- x + c(alpha) * p
       rnew <- r - c(alpha) * (A %*% p)
-      beta <- crossprod(rnew) / crossprod(r)
-      p <- rnew + c(beta) * p
+      znew <- solve(M, rnew)
+      beta <- crossprod(znew, rnew) / crossprod(z, r)
+      p <- znew + c(beta) * p
       r <- rnew
+      z <- znew
       j <- j + 1
       
       conv[j] <- Norm(r) / Norm(b)
@@ -40,7 +43,7 @@ CG <-
     }
     cat("...finished!\n")
     cat("The solution for x is:", x, "\n")
-
+    
     par(mfrow = c(2, 1))
     
     plot(
@@ -50,7 +53,7 @@ CG <-
       col = 'black',
       main = 'Convergence Plot',
       xlab = 'Iteration',
-      ylab = 'Conv. criterion', cex = 0.5
+      ylab = 'Conv. Criterion', cex = 0.5
     )
     lines(1:j, conv, lty = 2, col = 'black')
     
@@ -62,27 +65,34 @@ CG <-
       col = 'black',
       main = 'Convergence Plot',
       xlab = 'Iteration',
-      ylab = 'Conv. criterion (log-scale)',
+      ylab = 'Conv. Criterion (log-scale)',
       cex = 0.5
     )
     lines(1:j, conv, lty = 2, col = 'black')
     
-    return(list(conv = conv, x = x))
+    return(list(conv, x))
   }
 
 
 # Testing algorithm ----
-A <- matrix(c(4, 1, 2, 3), nrow = 2, byrow = TRUE)
-x <- c(1, 2)
+n <- 5
+generateSPDMatrix <- function(n) {
+  A <- matrix(rnorm(n * n), n, n)
+  A <- A %*% t(A)  # Make it symmetric positive definite
+  A <- A + n * diag(n)  # Ensure positive definiteness
+  return(A)
+}
+
+A <- generateSPDMatrix(n)
+b <- rnorm(n)
+x <- 1:n
 b <- A %*% x
 
-x0 <- c(0,0)
+x0 <- rep(0, n)
+M <- diag(n)  # Preconditioner (here: identity matrix)
 
-CG_results <- CG(A, b, x0)
-#CG_results
+PCG_results <- PCG(A, b, x0, M)
+PCG_results
 
 R_solver_results <- solve(A, b)
 R_solver_results
-
-
-
