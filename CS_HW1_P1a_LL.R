@@ -22,7 +22,7 @@ CG <-
     }
     
     cat("Starting Conguate Gradient algorithm...\n")
-    while (((norm(r) / norm(b)) > 1e-14) && j < 500) {
+    while (((Norm(r) / Norm(b)) > 1e-14) && j < 500) {
       alpha <- crossprod(r) / (t(p) %*% A %*% p)
       x <- x + c(alpha) * p
       rnew <- r - c(alpha) * (A %*% p)
@@ -38,7 +38,7 @@ CG <-
       }
       cat(sprintf('It. %3.0f: %20.16e', j, conv[j]), "\n")
     }
-    cat("...finished!")
+    cat("...finished! ")
     cat("The solution for x is:", x, "\n")
 
     par(mfrow = c(2, 1))
@@ -50,7 +50,7 @@ CG <-
       col = 'black',
       main = 'Convergence Plot',
       xlab = 'Iteration',
-      ylab = 'Conv. Criterion', cex = 0.5
+      ylab = 'Conv. criterion', cex = 0.5
     )
     lines(1:j, conv, lty = 2, col = 'black')
     
@@ -62,12 +62,12 @@ CG <-
       col = 'black',
       main = 'Convergence Plot',
       xlab = 'Iteration',
-      ylab = 'Conv. Criterion (log-scale)',
+      ylab = 'Conv. criterion (log-scale)',
       cex = 0.5
     )
     lines(1:j, conv, lty = 2, col = 'black')
     
-    return(list(conv, x))
+    return(list(conv = conv, x = x))
   }
 
 
@@ -79,7 +79,7 @@ b <- A %*% x
 x0 <- c(0,0)
 
 CG_results <- CG(A, b, x0)
-CG_results
+#CG_results
 
 R_solver_results <- solve(A, b)
 R_solver_results
