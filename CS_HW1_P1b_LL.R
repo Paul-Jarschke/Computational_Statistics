@@ -70,7 +70,7 @@ PCG <-
     )
     lines(1:j, conv, lty = 2, col = 'black')
     
-    return(list(conv, x))
+    return(list(conv = conv, x = x))
   }
 
 
