@@ -47,7 +47,7 @@ lanczos_vectors
 Sig <- function(v) v  # Define the preconditioner function Sig as the identity function
 A_func <- function(v) A %*% v  # Define the function A(v) to apply the matrix A to a vector v
 
-bayescg_results <- bayescg(A_func, b, x, Sig, max_it = 10, tol = 1e-6, reorth = TRUE)
+bayescg_results <- bayescg(A_func, b, x0, Sig, max_it = 10, tol = 1e-6, reorth = TRUE)
 
 # Find solution using implemented R solver ----
 R_solver_results <- solve(A, b)
