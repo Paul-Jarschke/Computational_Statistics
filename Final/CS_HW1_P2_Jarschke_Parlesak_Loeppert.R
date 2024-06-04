@@ -67,7 +67,9 @@ a_lanczos <-
 
 
 # Problem 2.2: Bayesian Conjugate Gradient Method ----
-bayescg <- function(A, b, x, Sig, max_it = NULL, tol = 1e-6, delay = NULL, reorth = TRUE, NormA = NULL, xTrue = NULL, SqrtSigTranspose = NULL) {
+bayescg <- function(A, b, x, Sig, max_it = NULL, tol = 1e-6, delay = NULL, 
+                    reorth = TRUE, NormA = NULL, xTrue = NULL, 
+                    SqrtSigTranspose = NULL) {
   
   ## Variable definitions: ----
   
@@ -148,15 +150,13 @@ bayescg <- function(A, b, x, Sig, max_it = NULL, tol = 1e-6, delay = NULL, reort
       # Reorthogonalize Residual
       r_ip_inv <- 1 / rIP[1:(i + 1)]
       ortho_term <- r[, 1:(i + 1)] %*% (t(r[, 1:(i + 1)]) %*% r[, i + 2])
-      print(dim(ortho_term))
-      print(length(r_ip_inv))
       diag_r_ip_inv <- diag(r_ip_inv, nrow = length(r_ip_inv), ncol = length(r_ip_inv))
       if (ncol(ortho_term) == nrow(diag_r_ip_inv)) {
         r[, i + 2] <- r[, i + 2] - ortho_term %*% diag_r_ip_inv
-      } else {
+      } # else {
         # if dimension checking is not successful, give warning
         # warning("Dimensions of ortho_term and diag(r_ip_inv) do not match")
-      }
+      # }
     }
     
     # Compute Residual Norms

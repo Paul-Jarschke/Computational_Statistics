@@ -1,29 +1,19 @@
 ---
-title: "CS_HW1"
+title: "Computational Statistics - Homework 1"
 output: pdf_document
-date: "`r Sys.Date()`"
+date: "04.06.2024"
+author: "Leon Löppert, Jan Parlesak, Paul Jarschke"
 ---
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-## R Markdown
-
-This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
-
-When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
-
-```{r cars}
-# --------------------------------------------------------------
-# Computational Statistics
-# Homework 1 - Problem 1
-# Names: Paul Jarschke, Jan Parlesak, Leon Löppert
-# --------------------------------------------------------------
+# Problem 1
+## Problem 1.1: Conjugate Gradient Algorithm
 
 
-# Problem 1.1: Conjugate Gradient Algorithm ----
-
+```{r}
 cg <- function(A, b, x) {
   # Initializations:
   r <- b - A %*% x  # initial residual vector
@@ -97,9 +87,11 @@ cg <- function(A, b, x) {
   # Return the convergence history and the final solution vector
   return(list(conv = conv, x = c(x)))
 }
+```
 
+## Problem 1.2: Preconditioned Conjugate Gradient Algorithm
 
-# Problem 1.2: Preconditioned Conjugate Gradient Algorithm ----
+```{r}
 
 pcg <- function(A, b, x, M, tol = 1e-14) {
   # Initializations: ----
@@ -177,15 +169,282 @@ pcg <- function(A, b, x, M, tol = 1e-14) {
   return(list(conv = conv, x = c(x)))
 }
 
-
 ```
 
-## Including Plots
+# Problem 2
+## Problem 2.1: Modified Lanczos that creates A-orthonormal bases
 
-You can also embed plots, for example:
-
-```{r pressure, echo=FALSE}
-plot(pressure)
+```{r}
+a_lanczos <-
+  function(A,  # Input matrix
+           v0,  # Initial vector
+           max_it = NULL,  # Maximum number of iterations
+           tol = 1e-10,  # Tolerance value
+           reorth = TRUE) {  # Flag for reorthogonalization
+    
+    # Preliminary calculations and initializations: ----
+    N <- length(v0)
+    
+    if(!is.null(max_it)) max_it <- N
+    
+    # Initialize the basis matrix V with zeros
+    V <- matrix(0, nrow = N, ncol = max_it + 1)
+    
+    # Compute initial vector Av and its norm beta
+    Av <- A(v0)
+    beta <- sqrt(sum(v0 * Av))
+    
+    # Set the first basis vector
+    V[, 2] <-
+      v0 / beta  # This is index 2 intentionally, 1 not returned
+    
+    # Normalize the initial vector Av
+    Av <- Av / beta
+    
+    i <- 2  # Iteration counter
+    
+    # Lanczos iteration loop
+    while (i < (max_it + 1) && beta > tol) {
+      # Lanczos recursions
+      w <- Av - beta * V[, i - 1]
+      alpha <- sum(w * Av)
+      w <- w - alpha * V[, i]
+      
+      # Reorthogonalization step
+      if (reorth) {
+        # Subtract projections onto previous basis vectors (twice)
+        w <- w - (V[, 2:i] %*% crossprod(V[, 2:i], A(w)))
+        w <- w - (V[, 2:i] %*% crossprod(V[, 2:i], A(w)))
+      }
+      
+      # Norm of New Vector Av
+      Av <- A(w)
+      beta <- sqrt(sum(w * Av))
+      
+      # Store new vector if its norm is above the tolerance
+      if (beta > tol) {
+        i <- i + 1
+        Av <- Av / beta
+        V[, i] <- w / beta
+      }
+    }
+    
+    # Return the matrix V containing the A-orthonormal basis vectors
+    return(V[, 2:i])
+  }
 ```
 
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+## Problem 2.2: Bayesian Conjugate Gradient Method
+
+```{r}
+bayescg <- function(A, b, x, Sig, max_it = NULL, tol = 1e-6, delay = NULL, 
+                    reorth = TRUE, NormA = NULL, xTrue = NULL, 
+                    SqrtSigTranspose = NULL) {
+  
+  ## Variable definitions: ----
+  
+  # Size of the system
+  N <- length(x)
+  
+  # Default Maximum Iterations
+  if (is.null(max_it)) {
+    max_it <- N
+  }
+  
+  # Residual and first search direction
+  r <- matrix(0, nrow = N, ncol = max_it + 1)
+  r[, 1] <- b - A(x)
+  S <- r
+  
+  # Inner products
+  rIP <- numeric(max_it + 1)
+  rIP[1] <- sum(r[, 1] * r[, 1])
+  sIP <- numeric(max_it)
+  
+  # Array holding matrix-vector products
+  SigAs_hist <- matrix(0, nrow = N, ncol = max_it)
+  
+  # Convergence information
+  # If xTrue is supplied, more information is computed
+  rNorm <- sqrt(rIP[1])
+  Res2 <- numeric(max_it + 1)
+  if (is.null(NormA) || is.null(xTrue)) {
+    bNorm <- norm(b, type = "2")
+    Res <- rNorm / bNorm
+    Res2[1] <- Res
+  }
+  
+  if (!is.null(xTrue)) {
+    xNorm <- norm(xTrue, type = "2")
+    err_hist <- numeric(max_it + 1)
+    err_hist[1] <- sum((x - xTrue) * A(x - xTrue))
+    if (!is.null(NormA)) {
+      xNormANorm <- norm(xTrue, type = "2") * NormA
+      Res <- rNorm / xNormANorm
+      Res2[1] <- Res
+    }
+    Res3 <- Res2
+    tr_hist <- numeric(max_it + 1)
+    tr_hist[1] <- sum(diag(A(Sig(diag(N)))))
+  }
+  
+  i <- 0
+  
+  
+  ## Iterating Through Bayesian Conjugate Gradient: ----
+  
+  while (i < max_it && (is.null(tol) || Res > tol)) {
+    # print(paste("Iteration:", i + 1))
+    # Compute Matrix Vector Products
+    As <- A(S[, i + 1])
+    if (!is.null(SqrtSigTranspose)) {
+      SigAs_hist[, i + 1] <- SqrtSigTranspose(As)
+      SigAs <- Sig(SigAs_hist[, i + 1])
+    } else {
+      SigAs_hist[, i + 1] <- Sig(As)
+      SigAs <- SigAs_hist[, i + 1]
+    }
+    ASigAs <- A(SigAs)
+    
+    # Search Direction Inner Product
+    sIP[i + 1] <- abs(sum(S[, i + 1] * ASigAs))
+    
+    # Calculate next x
+    alpha <- rIP[i + 1] / sIP[i + 1]
+    x <- x + alpha * SigAs
+    
+    # Calculate New Residual
+    r[, i + 2] <- r[, i + 1] - alpha * ASigAs
+    
+    if (reorth) {
+      # Reorthogonalize Residual
+      r_ip_inv <- 1 / rIP[1:(i + 1)]
+      ortho_term <- r[, 1:(i + 1)] %*% (t(r[, 1:(i + 1)]) %*% r[, i + 2])
+      diag_r_ip_inv <- diag(r_ip_inv, nrow = length(r_ip_inv), ncol = length(r_ip_inv))
+      if (ncol(ortho_term) == nrow(diag_r_ip_inv)) {
+        r[, i + 2] <- r[, i + 2] - ortho_term %*% diag_r_ip_inv
+      } # else {
+        # if dimension checking is not successful, give warning
+        # warning("Dimensions of ortho_term and diag(r_ip_inv) do not match")
+      # }
+    }
+    
+    # Compute Residual Norms
+    rIP[i + 2] <- sum(r[, i + 2] * r[, i + 2])
+    rNorm <- sqrt(rIP[i + 2])
+    if (!is.null(xTrue)) {
+      err_hist[i + 2] <- sum((x - xTrue) * A(x - xTrue))
+      tr_hist[i + 2] <- tr_hist[i + 1] - sum(diag(A(outer(SigAs, SigAs)))) / sIP[i + 1]
+      
+      rTrueNorm <- norm(b - A(x), type = "2")
+      if (!is.null(NormA)) {
+        Res <- rNorm / xNormANorm
+        Res3[i + 2] <- rTrueNorm / xNormANorm
+      } else {
+        Res3[i + 2] <- rTrueNorm / bNorm
+      }
+    }
+    if (is.null(NormA)) {
+      Res <- rNorm / bNorm
+    } else if (is.null(xTrue)) {
+      Res <- rNorm / NormA / norm(x, type = "2")
+    }
+    Res2[i + 2] <- Res
+    
+    # Calculate next search direction
+    beta <- rIP[i + 2] / rIP[i + 1]
+    S[, i + 2] <- r[, i + 2] + beta * S[, i + 1]
+    
+    i <- i + 1
+  }
+  
+  ## Return results: ----
+  
+  info <- list(res = Res2[1:(i + 1)], search_dir = (sIP[1:i] ^ (-1/2)) * S[, 1:i])
+  
+  if (!is.null(xTrue)) {
+    info$actual_res <- Res3[1:(i + 1)]
+    info$err <- err_hist[1:(i + 1)]
+    info$trace <- tr_hist[1:(i + 1)]
+  }
+  
+  if (!is.null(delay)) {
+    delay <- min(delay, i)
+    post_scale <- sum(rIP[(i - delay + 1):i]^2 / sIP[(i - delay + 1):i])
+    info$scale <- post_scale
+  }
+  
+  return(list(x = x, SigAs_hist = (sIP[1:i] ^ (-1/2)) * SigAs_hist[, 1:i], info = info))
+}
+```
+
+## Examples
+```{r}
+# Set seed for reproducability
+set.seed(123)
+
+# Number of rows in linear system of equations
+n <- 10
+
+# Create a random symmetric positive-definite coefficient matrix A
+createPSDmatrixA <-
+  function(n) {
+    A <- matrix(rnorm(n * n), n, n)
+    A <- crossprod(A) + n * diag(n)
+  }
+A <- createPSDmatrixA(n)
+
+# Generate a random vector b
+b <- rnorm(n)
+
+# Initial guess for x
+x0 <- rep(0, n)
+
+# Find solution using Conjugate Gradient Algorithm (Problem 1.1) ----
+cg_results <- cg(A, b, x0)
+
+# Find solution using Preconditioned Conjugate Gradient Algorithm (Problem 1.2) ----
+M1 <- diag(diag(A))  # Jacobi preconditioner
+M2 <- diag(n)  # Identity matrix
+
+pcg_results1 <- pcg(A, b, x0, M1)
+pcg_results2 <- pcg(A, b, x0, M2)
+
+# Testing a_lanczos function (Problem 2.1) ----
+Sig <- function(v) v  # Define the preconditioner function Sig as the identity function
+A_func <- function(v) A %*% v  # Define the function A(v) to apply the matrix A to a vector v
+v0 <- rnorm(n)
+lanczos_vectors <- a_lanczos(A_func, v0, max_it = 10, tol = 1e-10, reorth = TRUE)
+print("Lanczos vectors:")
+lanczos_vectors
+
+# Find solution using the Bayesian Conjugate Gradient Algorithm (Problem 2.2) ----
+bayescg_results <- bayescg(A_func, b, x0, Sig, max_it = 10, tol = 1e-6, reorth = TRUE)
+
+# Find solution using implemented R solver ----
+R_solver_results <- solve(A, b)
+
+# Compare results ----
+cat('Final solutions for x:\n')
+
+cat('... using Conjugate Gradient Algorithm:\n')
+cg_results$x
+
+cat('... using Preconditioned Conjugate Gradient Algorithm (Jacobi):\n')
+pcg_results1$x
+
+cat('... using Preconditioned Conjugate Gradient Algorithm (Identity):\n')
+pcg_results2$x
+
+cat('... using Bayesian Conjugate Gradient Algorithm:\n')
+bayescg_results$x
+
+cat('... using R Solver:\n')
+R_solver_results
+
+all.equal(cg_results$x, R_solver_results, tolerance = 1e-5)
+all.equal(pcg_results1$x, R_solver_results, tolerance = 1e-5)
+all.equal(pcg_results2$x, R_solver_results, tolerance = 1e-5)
+all.equal(bayescg_results$x, R_solver_results, tolerance = 1e-5)
+
+```
