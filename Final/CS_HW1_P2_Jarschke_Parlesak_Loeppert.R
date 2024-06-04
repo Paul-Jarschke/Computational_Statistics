@@ -68,22 +68,32 @@ a_lanczos <-
 
 # Problem 2.2: Bayesian Conjugate Gradient Method ----
 bayescg <- function(A, b, x, Sig, max_it = NULL, tol = 1e-6, delay = NULL, reorth = TRUE, NormA = NULL, xTrue = NULL, SqrtSigTranspose = NULL) {
+  
+  ## Variable definitions: ----
+  
+  # Size of the system
   N <- length(x)
   
+  # Default Maximum Iterations
   if (is.null(max_it)) {
     max_it <- N
   }
   
+  # Residual and first search direction
   r <- matrix(0, nrow = N, ncol = max_it + 1)
   r[, 1] <- b - A(x)
   S <- r
   
+  # Inner products
   rIP <- numeric(max_it + 1)
   rIP[1] <- sum(r[, 1] * r[, 1])
   sIP <- numeric(max_it)
   
+  # Array holding matrix-vector products
   SigAs_hist <- matrix(0, nrow = N, ncol = max_it)
   
+  # Convergence information
+  # If xTrue is supplied, more information is computed
   rNorm <- sqrt(rIP[1])
   Res2 <- numeric(max_it + 1)
   if (is.null(NormA) || is.null(xTrue)) {
@@ -108,9 +118,12 @@ bayescg <- function(A, b, x, Sig, max_it = NULL, tol = 1e-6, delay = NULL, reort
   
   i <- 0
   
+  
+  ## Iterating Through Bayesian Conjugate Gradient: ----
+  
   while (i < max_it && (is.null(tol) || Res > tol)) {
     # print(paste("Iteration:", i + 1))
-    
+    # Compute Matrix Vector Products
     As <- A(S[, i + 1])
     if (!is.null(SqrtSigTranspose)) {
       SigAs_hist[, i + 1] <- SqrtSigTranspose(As)
@@ -121,14 +134,18 @@ bayescg <- function(A, b, x, Sig, max_it = NULL, tol = 1e-6, delay = NULL, reort
     }
     ASigAs <- A(SigAs)
     
+    # Search Direction Inner Product
     sIP[i + 1] <- abs(sum(S[, i + 1] * ASigAs))
     
+    # Calculate next x
     alpha <- rIP[i + 1] / sIP[i + 1]
     x <- x + alpha * SigAs
     
+    # Calculate New Residual
     r[, i + 2] <- r[, i + 1] - alpha * ASigAs
     
     if (reorth) {
+      # Reorthogonalize Residual
       r_ip_inv <- 1 / rIP[1:(i + 1)]
       ortho_term <- r[, 1:(i + 1)] %*% (t(r[, 1:(i + 1)]) %*% r[, i + 2])
       print(dim(ortho_term))
@@ -142,6 +159,7 @@ bayescg <- function(A, b, x, Sig, max_it = NULL, tol = 1e-6, delay = NULL, reort
       }
     }
     
+    # Compute Residual Norms
     rIP[i + 2] <- sum(r[, i + 2] * r[, i + 2])
     rNorm <- sqrt(rIP[i + 2])
     if (!is.null(xTrue)) {
@@ -163,11 +181,14 @@ bayescg <- function(A, b, x, Sig, max_it = NULL, tol = 1e-6, delay = NULL, reort
     }
     Res2[i + 2] <- Res
     
+    # Calculate next search direction
     beta <- rIP[i + 2] / rIP[i + 1]
     S[, i + 2] <- r[, i + 2] + beta * S[, i + 1]
     
     i <- i + 1
   }
+  
+  ## Return results: ----
   
   info <- list(res = Res2[1:(i + 1)], search_dir = (sIP[1:i] ^ (-1/2)) * S[, 1:i])
   
