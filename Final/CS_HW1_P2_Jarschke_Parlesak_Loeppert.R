@@ -1,11 +1,69 @@
 # --------------------------------------------------------------
 # Computational Statistics
-# Homework 1
+# Homework 1 - Problem 2
 # Name: Paul Jarschke, Jan Parlesak, Leon Loeppert
 # --------------------------------------------------------------
 
-# Load dependencies ----
-source("CS_HW1_P2a_Jarschke_Parlesak_Loeppert.R")
+
+# Problem 2.1: Modified Lanczos that creates A-orthonormal bases ----
+
+a_lanczos <-
+  function(A,  # Input matrix
+           v0,  # Initial vector
+           max_it = NULL,  # Maximum number of iterations
+           tol = 1e-10,  # Tolerance value
+           reorth = TRUE) {  # Flag for reorthogonalization
+    
+    # Preliminary calculations and initializations: ----
+    N <- length(v0)
+    
+    if(!is.null(max_it)) max_it <- N
+    
+    # Initialize the basis matrix V with zeros
+    V <- matrix(0, nrow = N, ncol = max_it + 1)
+    
+    # Compute initial vector Av and its norm beta
+    Av <- A(v0)
+    beta <- sqrt(sum(v0 * Av))
+    
+    # Set the first basis vector
+    V[, 2] <-
+      v0 / beta  # This is index 2 intentionally, 1 not returned
+    
+    # Normalize the initial vector Av
+    Av <- Av / beta
+    
+    i <- 2  # Iteration counter
+    
+    # Lanczos iteration loop
+    while (i < (max_it + 1) && beta > tol) {
+      # Lanczos recursions
+      w <- Av - beta * V[, i - 1]
+      alpha <- sum(w * Av)
+      w <- w - alpha * V[, i]
+      
+      # Reorthogonalization step
+      if (reorth) {
+        # Subtract projections onto previous basis vectors (twice)
+        w <- w - (V[, 2:i] %*% crossprod(V[, 2:i], A(w)))
+        w <- w - (V[, 2:i] %*% crossprod(V[, 2:i], A(w)))
+      }
+      
+      # Norm of New Vector Av
+      Av <- A(w)
+      beta <- sqrt(sum(w * Av))
+      
+      # Store new vector if its norm is above the tolerance
+      if (beta > tol) {
+        i <- i + 1
+        Av <- Av / beta
+        V[, i] <- w / beta
+      }
+    }
+    
+    # Return the matrix V containing the A-orthonormal basis vectors
+    return(V[, 2:i])
+  }
 
 
 # Problem 2.2: Bayesian Conjugate Gradient Method ----
@@ -127,43 +185,3 @@ bayescg <- function(A, b, x, Sig, max_it = NULL, tol = 1e-6, delay = NULL, reort
   
   return(list(x = x, SigAs_hist = (sIP[1:i] ^ (-1/2)) * SigAs_hist[, 1:i], info = info))
 }
-
-# Example usage: ----
-
-# Generate a random matrix
-n <- 10
-A <- matrix(rnorm(n * n), n, n)
-
-# Ensure A is symmetric positive-definite
-A <- crossprod(A) + n * diag(n)
-
-# Generate a random vector b
-b <- rnorm(n)
-
-# Define the initial guess x
-x <- rep(0, n)
-
-# Define the preconditioner function Sig as the identity function
-Sig <- function(v) v
-
-# Define the function A(v) to apply the matrix A to a vector v
-A_func <- function(v) A %*% v
-
-# Testing a_lanczos function
-v0 <- rnorm(n)
-lanczos_vectors <- a_lanczos(A_func, v0, max_it = 10, tol = 1e-10, reorth = TRUE)
-print("Lanczos vectors:")
-print(lanczos_vectors)
-
-# Testing bayescg function
-bayescg_result <- bayescg(A_func, b, x, Sig, max_it = 10, tol = 1e-6, reorth = TRUE)
-print("BayesCG result:")
-print(bayescg_result)
-
-# R solver
-R_solver_results <- solve(A, b)
-print("R solver result:")
-print(R_solver_results)
-
-# Check if equal
-all.equal(R_solver_results, bayescg_result$x, tol = 1e-5)

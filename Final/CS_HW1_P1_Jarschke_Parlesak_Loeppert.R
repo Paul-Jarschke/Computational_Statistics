@@ -1,6 +1,6 @@
 # --------------------------------------------------------------
 # Computational Statistics
-# Homework 1
+# Homework 1 - Problem 1
 # Names: Paul Jarschke, Jan Parlesak, Leon Löppert
 # --------------------------------------------------------------
 
