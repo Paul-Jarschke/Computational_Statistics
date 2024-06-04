@@ -46,7 +46,7 @@ CG <-
     plot(
       1:j,
       conv,
-      type = 'l',
+      type = 'o',
       col = 'black',
       main = 'Convergence Plot',
       xlab = 'Iteration',

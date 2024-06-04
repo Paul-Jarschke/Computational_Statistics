@@ -4,7 +4,8 @@
 # Names: Paul Jarschke, Jan Parlesak, Leon Löppert
 # --------------------------------------------------------------
 
-# Problem 1.1 Conjugate Gradient Algorithm ----
+
+# Problem 1.1: Conjugate Gradient Algorithm ----
 
 cg <- function(A, b, x) {
   # Initializations:
