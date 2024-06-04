@@ -1,52 +1,14 @@
-library(Matrix)
+# --------------------------------------------------------------
+# Computational Statistics
+# Homework 1
+# Name: Paul Jarschke, Jan Parlesak, Leon Loeppert
+# --------------------------------------------------------------
 
-a_lanczos <- function(A, v0, max_it = NULL, tol = 1e-10, reorth = TRUE) {
-  
-  N <- length(v0)
-  
-  if (is.null(max_it)) {
-    max_it <- N
-  }
-  
-  V <- matrix(0, nrow = N, ncol = max_it + 1)
-  
-  Av <- A(v0)
-  beta <- sqrt(sum(v0 * Av))
-  V[, 2] <- v0 / beta  # This is index 2 intentionally, 1 not returned
-  Av <- Av / beta
-  
-  i <- 1
-  
-  while (i < max_it && beta > tol) {
-    # Lanczos Recursions
-    w <- Av - beta * V[, i]
-    alpha <- sum(w * Av)
-    w <- w - alpha * V[, i + 1]
-    
-    # Reorthogonalization
-    if (reorth) {
-      w <- w - V[, 2:(i + 1)] %*% (t(V[, 2:(i + 1)]) %*% A(w))
-      w <- w - V[, 2:(i + 1)] %*% (t(V[, 2:(i + 1)]) %*% A(w))
-    }
-    
-    # Norm of New Vector
-    Av <- A(w)
-    beta <- sqrt(sum(w * Av))
-    
-    # Store New Vector
-    if (beta > tol) {
-      i <- i + 1
-      Av <- Av / beta
-      V[, i + 1] <- w / beta
-    }
-  }
-  
-  return(V[, 2:(i + 1)])
-}
+# Load dependencies ----
+source("CS_HW1_P2a_Jarschke_Parlesak_Loeppert.R")
 
 
-
-
+# Problem 2.2: Bayesian Conjugate Gradient Method ----
 bayescg <- function(A, b, x, Sig, max_it = NULL, tol = 1e-6, delay = NULL, reorth = TRUE, NormA = NULL, xTrue = NULL, SqrtSigTranspose = NULL) {
   N <- length(x)
   
@@ -166,16 +128,16 @@ bayescg <- function(A, b, x, Sig, max_it = NULL, tol = 1e-6, delay = NULL, reort
   return(list(x = x, SigAs_hist = (sIP[1:i] ^ (-1/2)) * SigAs_hist[, 1:i], info = info))
 }
 
+# Example usage: ----
 
+# Generate a random matrix
+n <- 10
+A <- matrix(rnorm(n * n), n, n)
 
+# Ensure A is symmetric positive-definite
+A <- crossprod(A) + n * diag(n)
 
-
-
-# Define the symmetric positive definite matrix A
-n <- 5
-A <- diag(1:n)
-
-# Define the vector b
+# Generate a random vector b
 b <- rnorm(n)
 
 # Define the initial guess x
@@ -203,5 +165,5 @@ R_solver_results <- solve(A, b)
 print("R solver result:")
 print(R_solver_results)
 
+# Check if equal
 all.equal(R_solver_results, bayescg_result$x, tol = 1e-5)
-
