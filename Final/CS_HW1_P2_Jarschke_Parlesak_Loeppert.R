@@ -155,7 +155,7 @@ bayescg <- function(A, b, x, Sig, max_it = NULL, tol = 1e-6, delay = NULL, reort
         r[, i + 2] <- r[, i + 2] - ortho_term %*% diag_r_ip_inv
       } else {
         # if dimension checking is not successful, give warning
-        warning("Dimensions of ortho_term and diag(r_ip_inv) do not match")
+        # warning("Dimensions of ortho_term and diag(r_ip_inv) do not match")
       }
     }
     
