@@ -2,10 +2,8 @@
 
 # Set seed for reproducibility
 set.seed(1234)
-n <- 200               # much better estimation with 2000 or even 20000 (longer)
+n <- 200             # much better estimation with 2000 or even 20000 (longer)
 x <- runif(n, -5, 5)
-
-
 
 ############ (2) ############
 
@@ -81,11 +79,6 @@ em_algorithm <- function(data, beta, sigma, a, pi, max_iter = 100, tol = 1e-6) {
   list(beta = beta, sigma = sigma, pi = pi, iter = iter)
 }
 
-# Initial values
-beta_init <- c(0, 1.5)
-sigma_init <- 1.0
-pi_init <- 0.45
-
 # Run EM algorithm
-em_result <- em_algorithm(data, beta_init, sigma_init, a, pi_init)
+em_result <- em_algorithm(data, beta, sigma, a, pi)
 em_result
