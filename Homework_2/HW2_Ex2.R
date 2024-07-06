@@ -92,4 +92,29 @@ print(inla_fixed)
 print(glmm_random)
 print(inla_random)
 
+ci_glmm <- confint(glmm_model)
+print(ci_glmm)
+
 # 2.4) Comparative Plot ----
+# Plot fixed effect estimates
+fixed_effects <- data.frame(
+  Model = c("glmmTMB", "glmmTMB", "R-INLA", "R-INLA"),
+  Parameter = rep(c("Intercept", "Slope"), 2),
+  Estimate = c(glmm_fixed[1], glmm_fixed[2], inla_fixed$mean[1], inla_fixed$mean[2]),
+  Lower = c(ci_glmm[1, 1], ci_glmm[2, 1], inla_fixed$`0.025quant`[1], inla_fixed$`0.025quant`[2]),
+  Upper = c(ci_glmm[1, 2], ci_glmm[2, 2], inla_fixed$`0.975quant`[1], inla_fixed$`0.975quant`[2])
+)
+
+library(ggplot2)
+ggplot(fixed_effects, aes(x = Parameter, y = Estimate, color = Model)) +
+  geom_point(position = position_dodge(width = 0.5)) +
+  geom_errorbar(aes(ymin = Lower, ymax = Upper), width = 0.2, position = position_dodge(width = 0.5)) +
+  labs(title = "Fixed Effect Estimates (+ 95% CI)", y = "Estimate")
+
+# Plot random effect estimates
+inla_random_df <- data.frame(ID = inla_random$ID, Mean = inla_random$mean, Lower = inla_random$`0.025quant`, Upper = inla_random$`0.975quant`)
+ggplot(inla_random_df, aes(x = ID, y = Mean)) +
+  geom_point() +
+  geom_errorbar(aes(ymin = Lower, ymax = Upper), width = 0.2) +
+  labs(title = "Random Effect Estimates (R-INLA)", y = "Estimate")
+
