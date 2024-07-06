@@ -58,7 +58,9 @@ inla_model <-
   inla(
     formula,
     family = "poisson",
-    data = data_glmm
+    data = data_glmm,
+    control.predictor = list(compute = TRUE),
+    control.compute=list(return.marginals.predictor=TRUE)
   )
 summary(inla_model)
 
@@ -72,7 +74,9 @@ inla_model2 <-
   inla(
     formula2,
     family = "poisson",
-    data = data_glmm
+    data = data_glmm,
+    control.predictor = list(compute = TRUE),
+    control.compute=list(return.marginals.predictor=TRUE)
   )
 summary(inla_model2)
 
@@ -100,7 +104,7 @@ print(ci_glmm)
 fixed_effects <- data.frame(
   Model = c("glmmTMB", "glmmTMB", "R-INLA", "R-INLA"),
   Parameter = rep(c("Intercept", "Slope"), 2),
-  Estimate = c(glmm_fixed[1], glmm_fixed[2], inla_fixed$mean[1], inla_fixed$mean[2]),
+  Estimate = c(glmm_fixed$cond[1], glmm_fixed$cond[2], inla_fixed$mean[1], inla_fixed$mean[2]),
   Lower = c(ci_glmm[1, 1], ci_glmm[2, 1], inla_fixed$`0.025quant`[1], inla_fixed$`0.025quant`[2]),
   Upper = c(ci_glmm[1, 2], ci_glmm[2, 2], inla_fixed$`0.975quant`[1], inla_fixed$`0.975quant`[2])
 )
@@ -118,3 +122,18 @@ ggplot(inla_random_df, aes(x = ID, y = Mean)) +
   geom_errorbar(aes(ymin = Lower, ymax = Upper), width = 0.2) +
   labs(title = "Random Effect Estimates (R-INLA)", y = "Estimate")
 
+# Plot Posterior Distribution of R-Inla Parameter Estimates
+marginals_fixed <- inla_model$marginals.fixed
+marginals_random <- inla_model$marginals.random$cluster
+names(marginals_random) <- paste0("random_intercept.", 1:n_clus)
+list_marginals <- c(inla_model$marginals.fixed, inla_model$marginals.random$cluster)
+list_marginals
+
+marginals <- data.frame(do.call(rbind, list_marginals))
+marginals$parameter <- rep(names(list_marginals),
+                          times = sapply(list_marginals, nrow))
+
+ggplot(marginals, aes(x = x, y = y)) + geom_line() +
+  facet_wrap(~ parameter) +
+  labs(x = "", y = "Density", title = "Posterior Distribution of Parameters") +
+  theme_bw()
