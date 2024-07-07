@@ -162,11 +162,20 @@ random_effects_df <-
     Upper = inla_random$`0.975quant`,
     Mean_TMB = c(glmm_random$cond$cluster)$`(Intercept)`
   )
-ggplot(random_effects_df, aes(x = cluster, y = Mean_INLA)) +
-  geom_point(size=1.2) +
-  geom_errorbar(aes(ymin = Lower, ymax = Upper), width = 0.2) +
-  labs(title = "Random Effect Estimates (R-INLA)", y = "Estimate") +
-  geom_point(aes(x=cluster, y = Mean_TMB), color = "pink", size = 0.8)
+library(ggplot2)
+
+# Creating the ggplot
+ggplot(random_effects_df, aes(x = cluster)) +
+  geom_point(aes(y = Mean_INLA, color = "INLA", shape = "INLA"), size = 1.2) +
+  geom_errorbar(aes(ymin = Lower, ymax = Upper, color = "INLA"), width = 0.2) +
+  geom_point(aes(y = Mean_TMB, color = "TMB", shape = "TMB"), size = 0.8) +
+  labs(title = "Random Effect Estimates (R-INLA)",
+       y = "Estimate",
+       color = "Legend",
+       shape = "Legend") +
+  scale_color_manual(values = c("INLA" = "black", "TMB" = "red")) +
+  scale_shape_manual(values = c("INLA" = 16, "TMB" = 16)) +
+  theme(legend.position = "right")
   # this graph is not really pretty but you can see that the mean estimates are similar
 
 # Plot Posterior Distribution of R-INLA Parameter Estimates
@@ -184,4 +193,3 @@ ggplot(marginals, aes(x = x, y = y)) + geom_line() +
   facet_wrap(~ parameter,scales = "free") +
   labs(x = "", y = "Density", title = "Posterior Distribution of Parameters") +
   theme_bw()
-
