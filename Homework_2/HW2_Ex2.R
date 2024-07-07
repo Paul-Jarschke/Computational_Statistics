@@ -27,6 +27,7 @@ y <- rpois(n_total, lambda = lambda)
 data_glmm <- data.frame(y = y, x = x, cluster = as.factor(cluster))
 
 # Plot data ----
+library(ggplot2)
 data_plot <-
   ggplot(data=data_glmm, aes(x, y, color = cluster)) +
   geom_point(alpha=0.4) +
@@ -141,6 +142,8 @@ fixed_effects <- data.frame(
   Lower = c(ci_glmm[1, 1], ci_glmm[2, 1], inla_fixed$`0.025quant`[1], inla_fixed$`0.025quant`[2]),
   Upper = c(ci_glmm[1, 2], ci_glmm[2, 2], inla_fixed$`0.975quant`[1], inla_fixed$`0.975quant`[2])
 )
+
+# compare mode of INLA estimation not mean to fixed effects estimate from TMB?
 
 ggplot(fixed_effects, aes(x = Parameter, y = Estimate, color = Model)) +
   geom_point(position = position_dodge(width = 0.5)) +
